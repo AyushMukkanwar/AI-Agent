@@ -1,0 +1,14 @@
+**INVOICE #INV-2026-003**
+
+From: KBC Technologies  
+To: Will Smith
+
+Invoice Date: October 24, 2026  
+Due Date: November 15, 2026
+
+Description: Marketing Services  
+Amount: ₹58,000  
+Tax: ₹14,500  
+**Total Amount Due: ₹72,500**
+
+Payment Terms: Payment is due by November 15, 2026.

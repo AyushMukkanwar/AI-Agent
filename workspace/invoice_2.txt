@@ -1,0 +1,14 @@
+**INVOICE #INV-2026-002**
+
+From: XYZ Technologies  
+To: John Doe
+
+Invoice Date: October 15, 2026  
+Due Date: November 1, 2026
+
+Description: Backend Development Services  
+Amount: ₹20,000  
+Tax: ₹3,800  
+**Total Amount Due: ₹23,800**
+
+Payment Terms: Payment is due by November 1, 2026.

@@ -1,0 +1,14 @@
+**INVOICE #INV-2026-001**
+
+From: ABC Technologies  
+To: John Smith
+
+Invoice Date: October 20, 2026  
+Due Date: November 5, 2026
+
+Description: Website Development Services  
+Amount: ₹25,000  
+Tax: ₹4,500  
+**Total Amount Due: ₹29,500**
+
+Payment Terms: Payment is due by November 5, 2026.
