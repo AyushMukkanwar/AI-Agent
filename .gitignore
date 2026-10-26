@@ -1,2 +1,5 @@
 .venv/
 .workspace/
+run_log.jsonl
+__pycache__/
+*.py[cod]

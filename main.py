@@ -1,3 +1,5 @@
+import functools
+
 from anyio import Path
 
 from agent.agent import Agent
@@ -9,17 +11,29 @@ from agent.tools.registry import ToolRegistry
 
 MODEL_ID = 'gemini-3.5-flash-lite'
 
+def fail_once(func):
+    state = {"calls": 0}
+
+    @functools.wraps(func)          # keeps the name, docstring and signature
+    def wrapper(*args, **kwargs):
+        state["calls"] += 1
+        if state["calls"] == 1:
+            raise ConnectionError("Internal system temporarily unavailable (503). Please retry.")
+        return func(*args, **kwargs)
+
+    return wrapper
+
 def func():
     client = GeminiClient(MODEL_ID)
 
     local_tool_provider = LocalToolProvider()
 
     WORKSPACE = Path(__file__).parent / "workspace"
-    list_files, read_file, append_csv_row = make_file_tools(str(WORKSPACE))
+    list_files, read_file, append_csv_row, create_invoice_record = make_file_tools(str(WORKSPACE))
 
     local_tool_provider.register(list_files)
     local_tool_provider.register(read_file)
-    local_tool_provider.register(append_csv_row, requires_approval=True)
+    local_tool_provider.register(fail_once(create_invoice_record), requires_approval=True)
     local_tool_provider.register(ask_user)
 
     tool_registry = ToolRegistry([local_tool_provider])
@@ -38,11 +52,14 @@ def func():
         7. After any write, read the file back and confirm the new row is present and correct. Report this as evidence.
         8. If data looks inconsistent (for example, two documents sharing the same invoice number but different amounts), tell the user, and use ask_user if it affects which record is correct.
         9. When writing invoice records, use this column order: invoice_number, vendor, invoice_date (YYYY-MM-DD), due_date (YYYY-MM-DD), amount (plain number, no currency symbol or commas). If the file is empty or missing, write this header row first.
+        10. The amount to record is the Total Amount Due (including tax) unless the user says otherwise. State this in your summary.
+        11. If the vendor name in the request does not exactly match the documents (for example a typo), confirm the match with ask_user before writing anything.
+        12. Ask the user at most one clarifying question per ambiguity. If they decline or say no, stop and report what you found; do not ask again.
         """
 
-    agent  = Agent(client=client, tool_registry=tool_registry, memory=memory, max_steps=10, sys_prompt=SYS_PROMPT)
+    agent  = Agent(client=client, tool_registry=tool_registry, memory=memory, max_steps=15, sys_prompt=SYS_PROMPT)
 
-    print(agent.run('Find the latest invoice from KBC technologies, extract the amount and due date, enter it into our internal system, and tell me once it is done'))
+    print(agent.run('Find the latest KBC invoice and enter it into the system with dates in DD/MM/YYYY format.'))
 
 
 if __name__ == "__main__":
