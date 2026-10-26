@@ -1,5 +1,4 @@
 invoice_number,vendor,invoice_date,due_date,amount
 INV-2026-003,KBC Technologies,2026-10-25,2026-11-17,75000
-INV-2026-001,ABC Technologies,2026-10-20,2026-11-05,29500
 INV-2026-002,XYZ Technologies,2026-10-15,2026-11-01,23800
-INV-2026-003,KBC Technologies,2026-10-24,2026-11-15,72500
+INV-2026-001,ABC Technologies,2026-10-20,2026-11-05,29500

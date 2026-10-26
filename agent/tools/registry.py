@@ -27,3 +27,11 @@ class ToolRegistry:
         if provider is None:
             return False
         return provider.get_tool(name).requires_approval
+
+    def validate(self, name: str, args: dict) -> str | None:
+        provider = self._routes.get(name)
+        return provider.validate(name, args) if provider else None
+
+    def verify(self, name: str, args: dict) -> str | None:
+        provider = self._routes.get(name)
+        return provider.verify(name, args) if provider else None

@@ -1,0 +1,14 @@
+**INVOICE #INV-2026-005**
+
+From: Acme Cloud Solutions
+To: Jane Roe
+
+Invoice Date: October 22, 2026
+Due Date: November 10, 2026
+
+Description: Cloud Hosting & Storage
+Amount: ₹12,000
+Tax: ₹2,160
+**Total Amount Due: ₹14,160**
+
+Payment Terms: Net 20 days.

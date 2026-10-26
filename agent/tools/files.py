@@ -45,6 +45,12 @@ def make_file_tools(root: str):
         target = _safe("db.csv")
         new_file = not target.exists() or target.stat().st_size == 0
 
+        if not new_file:
+            content = target.read_bytes()
+            if content and not content.endswith(b"\n"):
+                with target.open("ab") as f:
+                    f.write(b"\n")
+
         with target.open("a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             if new_file:
@@ -53,7 +59,42 @@ def make_file_tools(root: str):
 
         return f"Created record {invoice_number} in db.csv"
 
-    return list_files, read_file, append_csv_row, create_invoice_record
+    def _read_invoice_rows() -> list[dict]:
+        target = _safe("db.csv")
+        if not target.exists():
+            return []
+        with target.open(newline="", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+
+    def validate_invoice(args: dict) -> str | None:
+        for label in ("invoice_date", "due_date"):
+            try:
+                datetime.strptime(str(args.get(label, "")), "%Y-%m-%d")
+            except ValueError:
+                return f"{label} must be YYYY-MM-DD, got '{args.get(label)}'"
+        try:
+            if float(args.get("amount", 0)) <= 0:
+                return "amount must be greater than zero"
+        except (TypeError, ValueError):
+            return "amount must be a number"
+        for row in _read_invoice_rows():
+            if (row.get("invoice_number") == str(args.get("invoice_number"))
+                    and row.get("invoice_date") == args.get("invoice_date")):
+                return (f"A record for {args.get('invoice_number')} dated "
+                        f"{args.get('invoice_date')} already exists")
+        return None
+
+    def verify_invoice(args: dict) -> str | None:
+        for row in _read_invoice_rows():
+            if (row.get("invoice_number") == str(args.get("invoice_number"))
+                    and row.get("invoice_date") == args.get("invoice_date")
+                    and row.get("due_date") == args.get("due_date")
+                    and float(row.get("amount", 0)) == float(args.get("amount", 0))):
+                return None
+        return "the record was not found in db.csv after writing"
+
+    return (list_files, read_file, append_csv_row, create_invoice_record,
+        validate_invoice, verify_invoice)
 
 
 def ask_user(question: str) -> str:

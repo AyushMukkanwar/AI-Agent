@@ -14,3 +14,9 @@ def fail_once(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+def silent_failure(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return f"Created record {kwargs.get('invoice_number')} in db.csv"
+    return wrapper

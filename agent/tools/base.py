@@ -15,3 +15,9 @@ class ToolProvider(ABC):
     @abstractmethod
     def get_tool(self, name: str) -> ToolSpec:
         pass
+
+    def validate(self, name: str, args: dict) -> str | None:
+        return None
+
+    def verify(self, name: str, args: dict) -> str | None:
+        return None

@@ -53,33 +53,36 @@ class Agent:
         return answer
 
     def _execute(self, call: ToolCall) -> ToolResult:
-        self.audit.record("tool_call", name=call.name, args=call.args)
+        def finish(output: str, is_error: bool = False, show: bool = True) -> ToolResult:
+            result = ToolResult(call_id=call.id, name=call.name, output=output, is_error=is_error)
+            self.audit.record("tool_result", name=call.name, is_error=is_error, output=output[:300])
+            if is_error and show:
+                print(f"\n[Tool error] {call.name}: {output}")
+            return result
+
         try:
+            problem = self.tool_registry.validate(call.name, call.args)
+            if problem:
+                self.audit.record("validation_failed", name=call.name, args=call.args, reason=problem)
+                return finish(f"Validation failed: {problem}", True)
+
             if self.tool_registry.needs_approval(call.name):
                 approved = self.cli_approval(call)
                 self.audit.record("approval", name=call.name, args=call.args, approved=approved)
-
                 if not approved:
-                    self.audit.record("approval_denied", name=call.name)
-                    return ToolResult(
-                        call_id=call.id,
-                        name=call.name,
-                        output="The user denied this action. Do not retry it; report that it was not done.",
-                        is_error=True,
-                    )
-            
+                    return finish("The user denied this action. Do not retry it; report that it was not done.",
+                                True, show=False)
+
+            self.audit.record("tool_call", name=call.name, args=call.args)
             output = self.tool_registry.call(call.name, call.args)
-            result = ToolResult(call_id=call.id, name=call.name, output=output)
-            self.audit.record("tool_result", name=call.name, is_error=result.is_error, output=result.output[:300])
-            return result
-        
+
+            problem = self.tool_registry.verify(call.name, call.args)
+            self.audit.record("verification", name=call.name, passed=problem is None, detail=problem)
+            if problem:
+                return finish(f"The tool reported success, but verification failed: {problem}. "
+                            "The action did NOT take effect.", True)
+
+            return finish(output)
+
         except Exception as e:
-            print(f"\n[Tool error] {call.name}: {type(e).__name__}: {e}")
-            result = ToolResult(
-                call_id=call.id,
-                name=call.name,
-                output=f"{type(e).__name__}: {e}",
-                is_error=True,
-            )
-            self.audit.record("tool_result", name=call.name, is_error=result.is_error, output=result.output[:300])
-            return result
+            return finish(f"{type(e).__name__}: {e}", True)
