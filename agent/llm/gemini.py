@@ -1,17 +1,28 @@
+import os
+import uuid
+
 from agent.llm.base import LLMClient
 from google.genai import Client
 from google.genai import types
 from agent.types import LLMResponse, Message, ToolCall, ToolSpec
-import uuid
 
 
 class GeminiClient(LLMClient):
 
     def __init__(self, model: str, config: dict | None = None):
         self.model = model
-        self.config = config
+        self.config = config or {}
+        project = (
+            self.config.get("project")
+            or os.environ.get("GOOGLE_CLOUD_PROJECT")
+        )
+        location = (
+            self.config.get("location")
+            or os.environ.get("GOOGLE_CLOUD_LOCATION")
+            or "global"
+        )
         self.client = Client(
-            enterprise=True, project='ai-agent-1-512407', location='global'
+            enterprise=True, project=project, location=location
         )
 
     def _to_gemini_contents(self, messages: list[Message]) -> list[types.Content]:

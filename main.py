@@ -1,6 +1,5 @@
-import functools
-
-from anyio import Path
+import argparse
+from pathlib import Path
 
 from agent.agent import Agent
 from agent.llm.gemini import GeminiClient
@@ -8,32 +7,33 @@ from agent.memory import ConversationMemory
 from agent.tools.files import ask_user, make_file_tools
 from agent.tools.local import LocalToolProvider
 from agent.tools.registry import ToolRegistry
+from demo_failures import fail_once
 
 MODEL_ID = 'gemini-3.5-flash-lite'
 
-def fail_once(func):
-    state = {"calls": 0}
-
-    @functools.wraps(func)          # keeps the name, docstring and signature
-    def wrapper(*args, **kwargs):
-        state["calls"] += 1
-        if state["calls"] == 1:
-            raise ConnectionError("Internal system temporarily unavailable (503). Please retry.")
-        return func(*args, **kwargs)
-
-    return wrapper
 
 def func():
+    parser = argparse.ArgumentParser(description="Run the AI agent.")
+    parser.add_argument(
+        "--inject-failure",
+        action="store_true",
+        help="Inject a temporary failure into invoice creation for demonstration.",
+    )
+    args = parser.parse_args()
+
     client = GeminiClient(MODEL_ID)
 
     local_tool_provider = LocalToolProvider()
 
     WORKSPACE = Path(__file__).parent / "workspace"
-    list_files, read_file, append_csv_row, create_invoice_record = make_file_tools(str(WORKSPACE))
+    list_files, read_file, _, create_invoice_record = make_file_tools(str(WORKSPACE))
+
+    if args.inject_failure:
+        create_invoice_record = fail_once(create_invoice_record)
 
     local_tool_provider.register(list_files)
     local_tool_provider.register(read_file)
-    local_tool_provider.register(fail_once(create_invoice_record), requires_approval=True)
+    local_tool_provider.register(create_invoice_record, requires_approval=True)
     local_tool_provider.register(ask_user)
 
     tool_registry = ToolRegistry([local_tool_provider])
@@ -55,11 +55,14 @@ def func():
         10. The amount to record is the Total Amount Due (including tax) unless the user says otherwise. State this in your summary.
         11. If the vendor name in the request does not exactly match the documents (for example a typo), confirm the match with ask_user before writing anything.
         12. Ask the user at most one clarifying question per ambiguity. If they decline or say no, stop and report what you found; do not ask again.
+        13. If an error says it is temporary, retry the same call once. If it fails again, stop and report the exact error.
+        14. In your final summary, mention any tool errors you hit and how you recovered from them.
         """
 
-    agent  = Agent(client=client, tool_registry=tool_registry, memory=memory, max_steps=15, sys_prompt=SYS_PROMPT)
+    agent = Agent(client=client, tool_registry=tool_registry, memory=memory, max_steps=15, sys_prompt=SYS_PROMPT)
 
-    print(agent.run('Find the latest KBC invoice and enter it into the system with dates in DD/MM/YYYY format.'))
+    user_input = input("Enter task: ")
+    print(agent.run(user_input))
 
 
 if __name__ == "__main__":
