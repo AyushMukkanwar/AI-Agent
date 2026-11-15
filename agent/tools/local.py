@@ -13,15 +13,29 @@ class LocalToolProvider(ToolProvider):
         self._validators: dict[str, Callable[[dict], str | None]] = {}
         self._verifiers: dict[str, Callable[[dict], str | None]] = {}
 
-    def register(self, func: Callable[..., Any],name: str | None = None, description: str | None = None, parameters: dict | None = None, requires_approval: bool = False,  validate=None, verify=None) -> None:
+    def register(
+            self, 
+            func: Callable[..., Any], 
+            name: str | None = None, 
+            description: str | None = None, 
+            parameters: dict | None = None, 
+            requires_approval: bool = False,  
+            validate=None, 
+            verify=None,
+            is_thread_safe=False
+        ) -> None:
         name = name or func.__name__
         description = description or inspect.getdoc(func) or ""
         parameters = parameters or schema_from_function(func)
         
         if name in self._funcs:
             raise ValueError(f"Tool '{name}' is already registered")
-        self._specs[name] = ToolSpec(name=name, description=description,
-                                     parameters=parameters, requires_approval=requires_approval)
+        self._specs[name] = ToolSpec(name=name, 
+                                     description=description,
+                                     parameters=parameters, 
+                                     requires_approval=requires_approval,
+                                     is_thread_safe=is_thread_safe
+                                     )
         self._funcs[name] = func
 
         if validate:

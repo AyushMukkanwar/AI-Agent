@@ -52,6 +52,7 @@ A tool-augmented AI agent built with Google Gemini to process invoice documents,
    ```bash
    export PROJECT_ID="your-gcp-project-id"       # or GOOGLE_CLOUD_PROJECT
    export LOCATION="global"                      # or GOOGLE_CLOUD_LOCATION (defaults to 'global' if omitted)
+   export MAX_STEPS="10"                         # Optional: max reasoning steps (defaults to 10)
    ```
 
 ---

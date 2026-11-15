@@ -36,6 +36,7 @@ class ToolSpec:
     description: str
     parameters: dict
     requires_approval: bool = False
+    is_thread_safe: bool = False
 
 @dataclass
 class ToolResult:

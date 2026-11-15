@@ -1,6 +1,8 @@
 import argparse
+import os
 from pathlib import Path
-
+from dotenv import load_dotenv
+from langfuse import get_client
 from agent.agent import Agent
 from agent.llm.gemini import GeminiClient
 from agent.memory import ConversationMemory
@@ -9,10 +11,15 @@ from agent.tools.local import LocalToolProvider
 from agent.tools.registry import ToolRegistry
 from demo_failures import fail_once
 
+load_dotenv()
+
 MODEL_ID = 'gemini-3.5-flash-lite'
+langfuse = get_client()
 
 
 def func():
+    default_max_steps = int(os.environ.get("MAX_STEPS", "10"))
+
     parser = argparse.ArgumentParser(description="Run the AI agent.")
     parser.add_argument(
         "--inject-failure",
@@ -23,6 +30,12 @@ def func():
         "--inject-silent-failure",
         action="store_true",
         help="Inject a silent failure into invoice creation for demonstration.",
+    )
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=default_max_steps,
+        help="Maximum reasoning steps for the agent (defaults to MAX_STEPS env var or 10).",
     )
     args = parser.parse_args()
 
@@ -39,8 +52,8 @@ def func():
         from demo_failures import silent_failure
         create_invoice_record = silent_failure(create_invoice_record)
 
-    local_tool_provider.register(list_files)
-    local_tool_provider.register(read_file)
+    local_tool_provider.register(list_files, is_thread_safe=True)
+    local_tool_provider.register(read_file, is_thread_safe=True)
     local_tool_provider.register(
         create_invoice_record,
         requires_approval=True,
@@ -73,10 +86,23 @@ def func():
         15. Only use create_invoice_record to enter invoice records.
         """
 
-    agent = Agent(client=client, tool_registry=tool_registry, memory=memory, max_steps=15, sys_prompt=SYS_PROMPT)
+    agent = Agent(
+        client=client,
+        tool_registry=tool_registry,
+        memory=memory,
+        max_steps=args.max_steps,
+        sys_prompt=SYS_PROMPT,
+    )
 
     user_input = input("Enter task: ")
-    print(agent.run(user_input))
+
+    with langfuse.start_as_current_observation(name="root_span", as_type="agent", input=user_input, version="1.0.0") as root_span:
+        final_res=agent.run(user_input)
+        print(final_res)
+        root_span.update(output=final_res)
+
+    langfuse.flush()
+
 
 
 if __name__ == "__main__":

@@ -1,10 +1,17 @@
 import os
 import uuid
-
+from dotenv import load_dotenv
 from agent.llm.base import LLMClient
 from google.genai import Client
 from google.genai import types
 from agent.types import LLMResponse, Message, ToolCall, ToolSpec
+from langfuse import get_client
+from openinference.instrumentation.google_genai import GoogleGenAIInstrumentor
+
+GoogleGenAIInstrumentor().instrument()
+
+load_dotenv()
+
 
 
 class GeminiClient(LLMClient):
@@ -12,6 +19,10 @@ class GeminiClient(LLMClient):
     def __init__(self, model: str, config: dict | None = None):
         self.model = model
         self.config = config or {}
+
+        langfuse = get_client()
+        assert langfuse.auth_check(), "Langfuse auth failed - check your keys ✋"
+
         project = (
             self.config.get("project")
             or os.environ.get("GOOGLE_CLOUD_PROJECT")
